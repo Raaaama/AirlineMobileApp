@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { StyleSheet, View, Image, TextInput, Text, TouchableOpacity, Modal } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Image, TextInput, Text, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import * as Font from 'expo-font';
 import AppLoading from 'expo-app-loading';
 //import Svg, { Circle } from 'react-native-svg';
@@ -15,13 +15,6 @@ const fonts = () => Font.loadAsync({
   'Manrope': require('./assets/fonts/Manrope-Bold.ttf'),
   'Manrope-Medium': require('./assets/fonts/Manrope-Medium.ttf')
 });
-
-var radio_props = [
-  {label: 'Econom', value: 0 },
-  {label: 'Comfort', value: 1 },
-  {label: 'Business', value: 2 },
-  {label: 'First Class', value: 3 }
-];
 
 export default function App() {
   const [font, setFont] = useState(false);
@@ -40,13 +33,20 @@ export default function App() {
   const [dateTxt, setDateTxt] = useState("Date");
   const [defaultDateStyle, setDefaultDateStyle] = useState(true);
 
-  const [passengersTxt, setPassengersTxt] = useState("Passengers");
-  const [defaultPassengersStyle, setDefaultPassengersStyle] = useState(true);
+  const [passengersTxt, setPassengersTxt] = useState("1, economy");
+  //const [defaultPassengersStyle, setDefaultPassengersStyle] = useState(true);
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 
-  const [checked, setChecked] = React.useState('first');
+  const [defaultEconomyStyle, setDefaultEconomyStyle] = useState(false);
+  const [defaultComfortStyle, setDefaultComfortStyle] = useState(true);
+  const [defaultBusinessStyle, setDefaultBusinessStyle] = useState(true);
+  const [defaultFirstClassStyle, setDefaultFirstClassStyle] = useState(true);
+
+  const [adultsNum, setAdultsNum] = useState(1);
+  const [childrenNum, setChildrenNum] = useState(0);
+  const [infantsNum, setInfantsNum] = useState(0);
 
   function chooseAirport(cityName, num) {
     if (num == 0) {
@@ -61,10 +61,81 @@ export default function App() {
     }
   }
 
+
   function chooseDate(day) {
     setDefaultDateStyle(false);
-    setSelectDateVisible(!selectDateVisible);
+    //setSelectDateVisible(!selectDateVisible);
     setDateTxt(day.day + ' ' + monthNames[day.month - 1]);
+  }
+
+  function chooseCls(cls) {
+    setDefaultEconomyStyle(true)
+    setDefaultComfortStyle(true)
+    setDefaultBusinessStyle(true)
+    setDefaultFirstClassStyle(true)
+
+    if (cls == 0) {
+      setDefaultEconomyStyle(false)
+    }
+    else if (cls == 1) {
+      setDefaultComfortStyle(false)
+    }
+    else if (cls == 2) {
+      setDefaultBusinessStyle(false)
+    }
+    else {
+      setDefaultFirstClassStyle(false)
+    }
+  }
+
+  function changePassengersNum(change, type) {
+    if (change == 0) {
+      if (type == 0) {
+        if (adultsNum > 1)
+          setAdultsNum(adultsNum - 1)
+      }
+      else if (type == 1) {
+        if (childrenNum != 0)
+          setChildrenNum(childrenNum - 1)
+      } 
+      else if (type == 2) {
+        if (infantsNum != 0)
+          setInfantsNum(infantsNum - 1)
+      } 
+    }
+    else if (change == 1) {
+      if (adultsNum + childrenNum + infantsNum < 9) {
+        if (type == 0) {
+          setAdultsNum(adultsNum + 1)
+        }
+        else if (type == 1) {
+          setChildrenNum(childrenNum + 1)
+        } 
+        else if (type == 2) {
+          if (infantsNum < adultsNum)
+            setInfantsNum(infantsNum + 1)
+          else {
+            Alert.alert("Warning","Number of infants on laps cannot be more than number of adults")
+          }
+        }
+      }
+    }
+  }
+
+  function pncDone() {
+    setSelectPassengerVisible(!selectPassengerVisible);
+    if (defaultEconomyStyle == false) {
+      setPassengersTxt(adultsNum + childrenNum + infantsNum + ', economy')
+    }
+    else if (defaultComfortStyle == false) {
+      setPassengersTxt(adultsNum + childrenNum + infantsNum + ', comfort')
+    }
+    else if (defaultBusinessStyle == false) {
+      setPassengersTxt(adultsNum + childrenNum + infantsNum + ', business')
+    }
+    else {
+      setPassengersTxt(adultsNum + childrenNum + infantsNum + ', first class')
+    }
   }
 
   function getCurrentDate() {
@@ -107,6 +178,48 @@ export default function App() {
   const [markedDates, setMarkedDates] = useState({})
   const [current, setCurrent] = useState();
 
+  //const [isLoading, setLoading] = useState(true);
+  const [airports, setAirports] = useState([]);
+
+  const getAirports = async () => {
+    try {
+      //const response = await fetch('http://192.168.1.64:4545/airports');
+      const response = await fetch('http://192.168.155.29:4545/airports');
+      const json = await response.json();
+      setAirports(json);
+      //console.log(json);
+    } 
+    catch (error) {
+      console.error(error);
+    }
+    finally {
+      //setLoading(false);
+      /*
+      for (var i = 0; i < airports.length; i++) {
+        airports[i].shown = 1;
+      }*/
+    }
+  }
+
+  useEffect(() => {
+    getAirports();
+    //setAirports(airports);
+  }, []);
+
+  function filterAirports(text) {
+    text = text.toLowerCase();
+    for (var i = 0; i < airports.length; i++) {
+      if (airports[i].city.toLowerCase().search(text) == -1 && airports[i].apName.toLowerCase().search(text) == -1 && airports[i].apCode.toLowerCase().search(text) == -1) {
+        airports[i].shown = 0;
+      }
+      else {
+        airports[i].shown = 1;
+      }
+    }
+    console.log(airports);
+  }
+
+
   if (font) {
   return (
 
@@ -116,6 +229,7 @@ export default function App() {
         visible={fromModalVisible}
         presentationStyle={'fullScreen'}
         onRequestClose={() => setFromModalVisible(!fromModalVisible)}>
+      {/*{isLoading ? <ActivityIndicator/> : ( */}
         <View style={styles.selectContainer}>
           <View style={styles.searchContainer}>
             <TouchableOpacity 
@@ -130,38 +244,31 @@ export default function App() {
               autoFocus={true}
               placeholder='Departure'
               style={styles.searchInput}
+              onChangeText={(text) => filterAirports(text)}
             ></TextInput>
           </View>
 
-          <TouchableOpacity 
-            style={styles.chooseAirportContainer}
-            onPress = {() => chooseAirport("Moscow",0)}>
-            <View style={styles.airportContainer}>
-              <View style={styles.airportInfo}>
-                <Text style={styles.city}>Moscow</Text>
-                <Text style={styles.airportName}>Domodedovo International Airport</Text>
+          {airports.map((apInfo) => {
+          return (
+            <TouchableOpacity 
+              style={apInfo.shown ? styles.chooseAirportContainer : {backgroundColor: 'black'}}
+              onPress = {() => chooseAirport(apInfo.city,0)}
+              key={apInfo.id}>
+              <View style={styles.airportContainer}>
+                <View style={styles.airportInfo}>
+                  <Text style={styles.city}>{apInfo.city}</Text>
+                  <Text style={styles.airportName}>{apInfo.apName}</Text>
+                </View>
+                <View style={styles.apCodeContainer}>
+                  <Text style={styles.apCode}>{apInfo.apCode}</Text>
+                </View>
               </View>
-              <View style={styles.apCodeContainer}>
-                <Text style={styles.apCode}>DME</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.chooseAirportContainer}
-            onPress = {() => chooseAirport("Nur-Sultan",0)}>
-            <View style={styles.airportContainer}>
-              <View style={styles.airportInfo}>
-                <Text style={styles.city}>Nur-Sultan</Text>
-                <Text style={styles.airportName}>Nursultan Nazarbayev International Airport</Text>
-              </View>
-              <View style={styles.apCodeContainer}>
-                <Text style={styles.apCode}>NQZ</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          );
+          })}
 
         </View>
+      {/*})} */}
       </Modal>
 
       <Modal
@@ -186,33 +293,24 @@ export default function App() {
             ></TextInput>
           </View>
 
-          <TouchableOpacity 
-            style={styles.chooseAirportContainer}
-            onPress = {() => chooseAirport("Moscow",1)}>
-            <View style={styles.airportContainer}>
-              <View style={styles.airportInfo}>
-                <Text style={styles.city}>Moscow</Text>
-                <Text style={styles.airportName}>Domodedovo International Airport</Text>
-              </View>
-              <View style={styles.apCodeContainer}>
-                <Text style={styles.apCode}>DME</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.chooseAirportContainer}
-            onPress = {() => chooseAirport("Nur-Sultan",1)}>
-            <View style={styles.airportContainer}>
-              <View style={styles.airportInfo}>
-                <Text style={styles.city}>Nur-Sultan</Text>
-                <Text style={styles.airportName}>Nursultan Nazarbayev International Airport</Text>
-              </View>
-              <View style={styles.apCodeContainer}>
-                <Text style={styles.apCode}>NQZ</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+          {airports.map((apInfo) => {
+          return (
+              <TouchableOpacity 
+                style={styles.chooseAirportContainer}
+                onPress = {() => chooseAirport(apInfo.city,1)}
+                key={apInfo.id}>
+                <View style={styles.airportContainer}>
+                  <View style={styles.airportInfo}>
+                    <Text style={styles.city}>{apInfo.city}</Text>
+                    <Text style={styles.airportName}>{apInfo.apName}</Text>
+                  </View>
+                  <View style={styles.apCodeContainer}>
+                    <Text style={styles.apCode}>{apInfo.apCode}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+           
+          );})}
 
         </View>
       </Modal>
@@ -228,6 +326,8 @@ export default function App() {
           flex: 0,
           marginTop: 'auto',
           backgroundColor:'white',
+          borderTopColor: 'black',
+          borderTopWidth: 1,
         }}>
           <Calendar
             theme={{
@@ -270,6 +370,11 @@ export default function App() {
             markedDates={markedDates}
             current={current}
           />
+          <TouchableOpacity 
+          style={styles.doneBtn}
+          onPress={() => setSelectDateVisible(!selectDateVisible)}>
+            <Text style={styles.doneTxt}>Done</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -284,6 +389,8 @@ export default function App() {
           flex: 0,
           marginTop: 'auto',
           backgroundColor:'white',
+          borderTopColor: 'black',
+          borderTopWidth: 1,
         }}>
           <Text style={styles.pncHeader}>Passengers and class</Text>
           <Text style={styles.pncSectionHeader}>Passengers</Text>
@@ -294,11 +401,17 @@ export default function App() {
               <Text style={styles.passengerTypeInfo}>Over 12 years old</Text>
             </View>
             <View style={styles.pncButtons}>
-              <TouchableOpacity style={styles.mpBtn}>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(0,0)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>-</Text>
               </TouchableOpacity>
-              <Text style={styles.passengelKol}>0</Text>
-              <TouchableOpacity style={styles.mpBtn}>
+              <View style={styles.passengelKolContainer}>
+                <Text style={styles.passengelKol}>{adultsNum}</Text>
+              </View>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(1,0)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>+</Text>
               </TouchableOpacity>
             </View>
@@ -310,11 +423,17 @@ export default function App() {
               <Text style={styles.passengerTypeInfo}>2-12 years old</Text>
             </View>
             <View style={styles.pncButtons}>
-              <TouchableOpacity style={styles.mpBtn}>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(0,1)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>-</Text>
               </TouchableOpacity>
-              <Text style={styles.passengelKol}>0</Text>
-              <TouchableOpacity style={styles.mpBtn}>
+              <View style={styles.passengelKolContainer}>
+                <Text style={styles.passengelKol}>{childrenNum}</Text>
+              </View>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(1,1)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>+</Text>
               </TouchableOpacity>
             </View>
@@ -326,33 +445,49 @@ export default function App() {
               <Text style={styles.passengerTypeInfo}>0-2 y.o., without a seat</Text>
             </View>
             <View style={styles.pncButtons}>
-              <TouchableOpacity style={styles.mpBtn}>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(0,2)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>-</Text>
               </TouchableOpacity>
-              <Text style={styles.passengelKol}>0</Text>
-              <TouchableOpacity style={styles.mpBtn}>
+              <View style={styles.passengelKolContainer}>
+                <Text style={styles.passengelKol}>{infantsNum}</Text>
+              </View>
+              <TouchableOpacity 
+              onPress={() => changePassengersNum(1,2)}
+              style={styles.mpBtn}>
                 <Text style={styles.mpBtnTxt}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
           <Text style={styles.pncSectionHeader}>Class</Text>
-          {/* 
-          <RadioForm
-            radio_props={radio_props}
-            initial={0}
-            buttonColor={'#001a2d'}
-            buttonOuterColor={'#001a2d'}
-            //buttonInnerColor={'#001a2d'}
-            buttonOuterColor={this.state.value3Index === i ? '#001a2d' : '#000'}
-            onPress={(value) => {this.setState({value:value})}}
-          />*/}
-
-          <RadioButton
-            value="first"
-            status={ checked === 'first' ? 'checked' : 'unchecked' }
-            onPress={() => setChecked('first')
-          }
-        />
+          <View style={styles.selectClass}>
+            <TouchableOpacity 
+            onPress={() => chooseCls(0)}
+            style={defaultEconomyStyle ? [styles.cls, {borderTopLeftRadius: 10, borderBottomLeftRadius: 10}] : [styles.chosenCls, {borderTopLeftRadius: 10, borderBottomLeftRadius: 10}]}>
+              <Text 
+              style={defaultEconomyStyle ? styles.clsTxt : [styles.clsTxt, {color: 'white'}]}>Economy</Text></TouchableOpacity>
+            <TouchableOpacity 
+            onPress={() => chooseCls(1)}
+            style={defaultComfortStyle ? styles.cls : styles.chosenCls}>
+              <Text 
+              style={defaultComfortStyle ? styles.clsTxt : [styles.clsTxt, {color: 'white'}]}>Comfort</Text></TouchableOpacity>
+            <TouchableOpacity 
+            onPress={() => chooseCls(2)}
+            style={defaultBusinessStyle ? styles.cls : styles.chosenCls}>
+              <Text 
+              style={defaultBusinessStyle ? styles.clsTxt : [styles.clsTxt, {color: 'white'}]}>Business</Text></TouchableOpacity>
+            <TouchableOpacity 
+            onPress={() => chooseCls(3)}
+            style={defaultFirstClassStyle ? [styles.cls, {borderTopRightRadius: 10, borderBottomRightRadius: 10}] : [styles.chosenCls, {borderTopRightRadius: 10, borderBottomRightRadius: 10}]}>
+              <Text 
+              style={defaultFirstClassStyle ? styles.clsTxt : [styles.clsTxt, {color: 'white'}]}>First Class</Text></TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+          style={styles.doneBtn}
+          onPress={() => pncDone()}>
+            <Text style={styles.doneTxt}>Done</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -364,8 +499,7 @@ export default function App() {
 
       <TouchableOpacity 
         style={[styles.input,{marginTop: '2%', borderTopLeftRadius: 10, borderTopRightRadius: 10}]}
-        onPress={() => setFromModalVisible(!fromModalVisible)}
-      >
+        onPress={() => setFromModalVisible(!fromModalVisible)}>
         <Text 
           style={defaultFromStyle ? styles.inputStyle1 : styles.inputStyle2}>
           {fromTxt}
@@ -389,7 +523,7 @@ export default function App() {
         <TouchableOpacity style={[styles.btn,{borderTopRightRadius: 10, borderBottomRightRadius: 10}]}
           onPress={() => setSelectPassengerVisible(!selectPassengerVisible)}
         >
-          <Text style={defaultPassengersStyle ? styles.txt : styles.txt2}>{passengersTxt}</Text>
+          <Text style={styles.txt2}>{passengersTxt}</Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.search}>
@@ -439,7 +573,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'white',
     alignItems: 'center',
-    marginTop: '2%'
+    marginTop: '1%'
   },
   airportInfo: {
     width: '70%',
@@ -549,12 +683,27 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
+  doneBtn: {
+    height: 60,
+    width: '95%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopColor: 'black',
+    borderTopWidth: 1,
+  },
+  doneTxt: {
+    fontFamily: 'Manrope',
+    fontSize: 20,
+    color: 'black',
+  },
   pncHeader: {
     color: 'black',
     fontSize: 25,
     textAlign: 'center',
     fontFamily: 'Manrope',
-    margin: '3%'
+    margin: '3%',
+    
   },
   pncSectionHeader: {
     color: 'black',
@@ -597,10 +746,53 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: 'white',
   },
+  passengelKolContainer: {
+    width: 55,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   passengelKol: {
     fontFamily: 'Manrope',
     fontSize: 20,
     color: 'black',
     marginHorizontal: '13%',
+    //alignItems: 'center'
+  },
+  selectClass: {
+    //backgroundColor: 'black',
+    alignSelf: 'center',
+    
+    flexDirection: 'row',
+    width: '95%',
+    marginBottom: 15
+
+    /*
+    backgroundColor: '#e6e6e6',
+    borderRadius: 10,
+    height: 40,
+    */
+  },
+  cls: {
+    backgroundColor: '#e6e6e6',
+    height: 40,
+    width: '25%',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    //borderColor: 'black',
+    //borderWidth: 1
+  },
+  chosenCls: {
+    backgroundColor: '#001a2d',
+    color: 'white',
+    height: 40,
+    width: '25%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clsTxt: {
+    fontFamily: 'Manrope',
+    fontSize: 17,
+    color: 'black'
   }
 });
