@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image, TextInput, Text, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Image, TextInput, Text, TouchableOpacity, Modal, Alert, ActivityIndicator, FlatList } from 'react-native';
 import * as Font from 'expo-font';
 import AppLoading from 'expo-app-loading';
 //import Svg, { Circle } from 'react-native-svg';
@@ -16,8 +16,12 @@ const fonts = () => Font.loadAsync({
   'Manrope-Medium': require('./assets/fonts/Manrope-Medium.ttf')
 });
 
+var apFetched = false;
+
 export default function App() {
   const [font, setFont] = useState(false);
+
+  const [airports, setAirports] = useState([]);
 
   const [fromModalVisible, setFromModalVisible] = useState(false);
   const [toModalVisible, setToModalVisible] = useState(false);
@@ -49,6 +53,8 @@ export default function App() {
   const [infantsNum, setInfantsNum] = useState(0);
 
   function chooseAirport(cityName, num) {
+    console.log(airports);
+    /*
     if (num == 0) {
       setDefaultFromStyle(false);
       setFromModalVisible(!fromModalVisible);
@@ -59,6 +65,7 @@ export default function App() {
       setToModalVisible(!toModalVisible);
       setToText(cityName);
     }
+    */
   }
 
 
@@ -179,7 +186,6 @@ export default function App() {
   const [current, setCurrent] = useState();
 
   //const [isLoading, setLoading] = useState(true);
-  const [airports, setAirports] = useState([]);
 
   const getAirports = async () => {
     try {
@@ -187,12 +193,13 @@ export default function App() {
       const response = await fetch('http://192.168.155.29:4545/airports');
       const json = await response.json();
       setAirports(json);
-      //console.log(json);
+      console.log('airports fetched');
     } 
     catch (error) {
       console.error(error);
     }
     finally {
+      apFetched = true;
       //setLoading(false);
       /*
       for (var i = 0; i < airports.length; i++) {
@@ -201,10 +208,15 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
+  if (!apFetched) {
     getAirports();
+  }
+
+  
+  useEffect(() => {
+    //getAirports();
     //setAirports(airports);
-  }, []);
+  });
 
   function filterAirports(text) {
     text = text.toLowerCase();
@@ -216,13 +228,13 @@ export default function App() {
         airports[i].shown = 1;
       }
     }
-    console.log(airports);
+    //console.log(airports);
+    setAirports(airports);
   }
 
 
   if (font) {
   return (
-
     <View style={styles.container}>
       <Modal
         animationType="slide"
@@ -248,6 +260,28 @@ export default function App() {
             ></TextInput>
           </View>
 
+          <FlatList
+            style={{width: '100%'}}
+            data={airports}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={item.shown ? styles.chooseAirportContainer : {height: 0}}
+                onPress = {() => chooseAirport(item.city,0)}
+                key={item.id}>
+                <View style={styles.airportContainer}>
+                  <View style={styles.airportInfo}>
+                    <Text style={styles.city}>{item.city}</Text>
+                    <Text style={styles.airportName}>{item.apName}</Text>
+                  </View>
+                  <View style={styles.apCodeContainer}>
+                    <Text style={styles.apCode}>{item.apCode}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+
+          {/*
           {airports.map((apInfo) => {
           return (
             <TouchableOpacity 
@@ -264,8 +298,10 @@ export default function App() {
                 </View>
               </View>
             </TouchableOpacity>
+            
           );
           })}
+        */}
 
         </View>
       {/*})} */}

@@ -11,7 +11,7 @@ var con = mysql.createConnection({
     host:'localhost',
     port:'3306',
     user:'root',
-    password:'Nazamari123@',
+    password:'root',
     database: 'mydb'
 });
 
@@ -30,7 +30,6 @@ app.get('/airports', function(req, res){
   con.query('select a.id, a.apCode, a.apName, a.city, b.countryName, true as shown from airports a, countries b where deleted = 0 and a.idCountry = b.idCountry', function(error, rows, fields){
         if(error) console.log(error);
         else{
-            //console.log(rows);
             res.send(rows);
         }
   });
