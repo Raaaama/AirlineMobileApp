@@ -26,11 +26,21 @@ con.connect(function(error){
   else console.log("connected");
 });
 
-app.get('/airports', function(req, res){
+var data = {}
+
+app.get('/data', function(req, res){
   con.query('select a.id, a.apCode, a.apName, a.city, b.countryName, true as shown from airports a, countries b where deleted = 0 and a.idCountry = b.idCountry', function(error, rows, fields){
-        if(error) console.log(error);
-        else{
-            res.send(rows);
-        }
+      if(error) console.log(error);
+      else {
+        data["airports"] = rows;
+        //res.send(data);
+      }
+  });
+  con.query('SELECT * FROM availableFlights where deleted = 0', function(error, rows, fields){
+    if(error) console.log(error);
+    else {
+      data["availableFlights"] = rows;
+      res.send(data);
+    }
   });
 });
